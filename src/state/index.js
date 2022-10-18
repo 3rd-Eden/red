@@ -3,7 +3,7 @@ const typecheck = require('red/internals/typeof');
 const clone = require('red/internals/clone');
 
 /**
- * 
+ *
  */
 class State {
   constructor(state = {}) {
@@ -45,8 +45,8 @@ class State {
     });
 
     const proxy = new Proxy({}, {
-      get: ( target, prop, receiver ) => {
-        return Reflect.get( target, prop, receiver );
+      get: (target, prop, receiver) => {
+        return Reflect.get(target, prop, receiver);
       },
 
       deleteProperty: (target, key) => {
