@@ -4,8 +4,10 @@
   "description": "React Experimental Development",
   "main": "index.js",
   "scripts": {
-    "test": "cypress run --component --headless",
-    "test:open": "cypress open",
+    "test": "npm run test:web && npm run test:cypress",
+    "test:web": "cypress run --component --headless",
+    "test:web:debug": "cypress open",
+    "test:node": "mocha ./test/*.test.js",
     "build": "webpack --mode production"
   },
   "keywords": [
@@ -23,6 +25,7 @@
     "babel-loader": "^8.2.5",
     "cypress": "^10.10.0",
     "cypress-terminal-report": "^4.1.2",
+    "mocha": "^10.1.0",
     "node-libs-browser": "^2.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -34,7 +37,7 @@
     "react-dom": ">=18"
   },
   "exports": {
-    ".": "./src/index.js",
+    "./pure": "./src/index.js",
     "./package.json": "./package.json",
     "./catalog": "./src/catalog/index.js",
     "./export": "./src/export/index.js",

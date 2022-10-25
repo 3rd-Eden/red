@@ -8,6 +8,7 @@ const clone = require('red/internals/clone');
 class State {
   constructor(state = {}) {
     this.listeners = new Set();
+    this.changes = false;
     this.snapshot = {};
 
     //
@@ -25,7 +26,7 @@ class State {
    * @private
    */
   modified() {
-    this.snapshot = clone(this.state);
+    this.changes = true;
     this.listeners.forEach((fn) => fn());
   }
 
@@ -38,39 +39,42 @@ class State {
    * @public
    */
   create(state = {}) {
-    Object.defineProperty(state, STATE, {
-      enumerable: false,
-      writable: false,
-      value: this
-    });
-
     const proxy = new Proxy({}, {
-      get: (target, prop, receiver) => {
-        return Reflect.get(target, prop, receiver);
+      get: (target, key, receiver) => {
+        if (key === STATE) return this;
+
+        return Reflect.get(target, key, receiver);
       },
 
       deleteProperty: (target, key) => {
-        Reflect.deleteProperty(target, key);
-        this.modified();
+        const current = Reflect.get(target, key);
+        const deleted = Reflect.deleteProperty(target, key);
 
-        return true;
+        if (current && current[STATE]) current[STATE].unsubscribe(this.modified);
+        if (deleted) this.modified();
+
+        return deleted;
       },
 
-      defineProperty: (target, key, descriptor) => {
-        Object.defineProperty(target, key, descriptor);
+      set: (target, key, value, receiver) => {
+        const current = Reflect.get(target, key, receiver);
 
-        let value = target[key];
+        if (current === value) return true;
+        if (current && current[STATE]) current[STATE].unsubscribe(this.modified);
+
         const type = typecheck(value);
 
         if ('object' === type || 'array' === type) {
           const tracker = new State(value);
-          tracker.subscribe(this.modified);
 
-          value = target[key] = tracker.state;
+          tracker.subscribe(this.modified);
+          value = tracker.state;
         }
 
+        Reflect.set(target, key, value, receiver);
         this.modified();
-        return value;
+
+        return true;
       }
     });
 
@@ -107,6 +111,11 @@ class State {
    * @public
    */
   getSnapshot() {
+    if (!this.changes) return this.snapshot;
+
+    this.snapshot = clone(this.state);
+    this.changes = false;
+
     return this.snapshot;
   }
 }
@@ -114,7 +123,5 @@ class State {
 //
 // Expose for consumption.
 //
-module.exports = {
-  ...(new State()),
-  State
-};
+module.exports = new State();
+module.exports.State = State;
